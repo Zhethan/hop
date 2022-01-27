@@ -39,6 +39,7 @@ import {
 } from 'src/hooks'
 import { ButtonsWrapper } from 'src/components/buttons/ButtonsWrapper'
 import useAvailableLiquidity from './useAvailableLiquidity'
+import L1CanonicalBridgeOption from './L1CanonicalBridgeOption'
 
 const Send: FC = () => {
   const styles = useSendStyles()
@@ -543,6 +544,15 @@ const Send: FC = () => {
         loadingValue={loadingSendData}
         disableInput
       />
+
+      {fromNetwork?.isLayer1 && (
+        <L1CanonicalBridgeOption
+          amount={fromTokenAmountBN}
+          token={sourceToken}
+          estimatedAmount={toTokenAmount}
+          destNetwork={toNetwork}
+        />
+      )}
 
       <CustomRecipientDropdown
         styles={styles}
