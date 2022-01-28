@@ -8,7 +8,7 @@ import React, {
   useCallback,
 } from 'react'
 import Onboard from 'bnc-onboard'
-import { ethers, Contract, BigNumber } from 'ethers'
+import { ethers, BigNumber } from 'ethers'
 import Address from 'src/models/Address'
 import { networkIdToSlug, getRpcUrl, getBaseExplorerUrl } from 'src/utils'
 import { blocknativeDappid } from 'src/config'
@@ -32,8 +32,7 @@ type Props = {
   disconnectWallet: () => void
   walletConnected: boolean
   walletName: string
-  checkConnectedNetworkId: (networkId: number) => Promise<boolean>
-  getWriteContract: (contract: Contract | undefined) => Promise<Contract | undefined>
+  checkConnectedNetworkId: (networkId: number | string) => Promise<boolean>
 }
 
 // TODO: modularize
@@ -270,8 +269,12 @@ const Web3ContextProvider: FC = ({ children }) => {
 
   // TODO: cleanup
   const checkConnectedNetworkId = useCallback(
-    async (networkId?: number): Promise<boolean> => {
+    async (networkId?: number | string): Promise<boolean> => {
       if (!(networkId && provider)) return false
+
+      if (typeof networkId === 'string') {
+        networkId = Number(networkId)
+      }
 
       const signerNetworkId = (await provider.getNetwork())?.chainId
       logger.debug('checkConnectedNetworkId', networkId, signerNetworkId)
@@ -337,32 +340,6 @@ const Web3ContextProvider: FC = ({ children }) => {
     [provider, onboard]
   )
 
-  // TODO: cleanup
-  const getWriteContract = async (contract?: Contract): Promise<Contract | undefined> => {
-    if (!contract) return
-    const signerNetworkId = (await provider?.getNetwork())?.chainId
-    const contractNetworkId = (await contract.provider.getNetwork()).chainId
-    if (signerNetworkId?.toString() !== contractNetworkId.toString()) {
-      onboard.config({ networkId: Number(contractNetworkId) })
-      if (onboard.getState().address) {
-        await onboard.walletCheck()
-      }
-
-      return
-    }
-
-    if (!provider) {
-      throw new Error('Provider is undefined')
-    }
-
-    const signer = provider?.getSigner()
-    if (!signer) {
-      throw new Error('Provider has no signer')
-    }
-
-    return contract.connect(signer)
-  }
-
   return (
     <Web3Context.Provider
       value={{
@@ -377,7 +354,6 @@ const Web3ContextProvider: FC = ({ children }) => {
         disconnectWallet,
         walletName,
         checkConnectedNetworkId,
-        getWriteContract,
       }}
     >
       {children}

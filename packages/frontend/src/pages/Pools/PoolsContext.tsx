@@ -521,6 +521,9 @@ const PoolsProvider: FC = ({ children }) => {
       throw new Error('Hop token is required')
     }
 
+    const isNetworkConnected = await checkConnectedNetworkId(selectedNetwork?.networkId)
+    if (!isNetworkConnected) return
+
     const signer = provider?.getSigner()
     const bridge = await sdk.bridge(canonicalToken.symbol).connect(signer as Signer)
     const amm = bridge.getAmm(network.slug)
