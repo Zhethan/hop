@@ -14,8 +14,7 @@ import { useApp } from 'src/contexts/AppContext'
 import logger from 'src/logger'
 import { commafy, findMatchingBridge, sanitizeNumericalString, toTokenDisplay } from 'src/utils'
 import useSendData from 'src/pages/Send/useSendData'
-import AmmDetails from 'src/components/AmmDetails'
-import FeeDetails from 'src/components/FeeDetails'
+import { FeeDetails, AmmDetails } from 'src/components/InfoTooltip'
 import { amountToBN, formatError } from 'src/utils/format'
 import { useSendStyles } from './useSendStyles'
 import SendHeader from './SendHeader'
@@ -344,13 +343,8 @@ const Send: FC = () => {
     estimatedReceived: estimatedReceivedDisplay,
   })
 
-  const { l1CanonicalBridge, sendL1CanonicalBridge } = useL1CanonicalBridge(
-    sourceToken,
-    toNetwork,
-    fromTokenAmountBN,
-    estimatedReceived,
-    estimatedGasCost
-  )
+  const { l1CanonicalBridge, sendL1CanonicalBridge, usingL1CanonicalBridge, setUl1cb } =
+    useL1CanonicalBridge(sourceToken, fromTokenAmountBN, toNetwork, estimatedReceived)
 
   useEffect(() => {
     if (tx) {
@@ -490,7 +484,7 @@ const Send: FC = () => {
       </Flex>
 
       <SendAmountSelectorCard
-        value={toTokenAmount}
+        value={usingL1CanonicalBridge ? fromTokenAmount : toTokenAmount}
         token={destToken ?? placeholderToken}
         label={'To (estimated)'}
         selectedNetwork={toNetwork}
@@ -508,6 +502,10 @@ const Send: FC = () => {
           l1CanonicalBridge={l1CanonicalBridge}
           sendL1CanonicalBridge={sendL1CanonicalBridge}
           destToken={destToken}
+          destNetwork={toNetwork}
+          usingL1CanonicalBridge={usingL1CanonicalBridge}
+          setUl1cb={setUl1cb}
+          estimatedReceivedDisplay={estimatedReceivedDisplay}
         />
       )}
 
@@ -531,14 +529,20 @@ const Send: FC = () => {
           <DetailRow
             title="Estimated Received"
             tooltip={
-              <AmmDetails
-                rate={rate}
-                slippageTolerance={slippageTolerance}
-                priceImpact={priceImpact}
-                amountOutMinDisplay={amountOutMinDisplay}
-              />
+              usingL1CanonicalBridge ? undefined : (
+                <AmmDetails
+                  rate={rate}
+                  slippageTolerance={slippageTolerance}
+                  priceImpact={priceImpact}
+                  amountOutMinDisplay={amountOutMinDisplay}
+                />
+              )
             }
-            value={estimatedReceivedDisplay}
+            value={
+              usingL1CanonicalBridge
+                ? toTokenDisplay(fromTokenAmountBN, destToken?.decimals, destToken?.symbol)
+                : estimatedReceivedDisplay
+            }
             xlarge
             bold
           />
@@ -555,7 +559,7 @@ const Send: FC = () => {
               className={styles.button}
               large
               highlighted={!!needsApproval}
-              disabled={!approveButtonActive}
+              disabled={!approveButtonActive || usingL1CanonicalBridge}
               onClick={handleApprove}
               loading={approving}
               fullWidth
@@ -568,7 +572,7 @@ const Send: FC = () => {
           <Button
             className={styles.button}
             startIcon={sendButtonActive && <SendIcon />}
-            onClick={send}
+            onClick={usingL1CanonicalBridge ? sendL1CanonicalBridge : send}
             disabled={!sendButtonActive}
             loading={sending}
             large
